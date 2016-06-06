@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Q - Quick Link System</title>
+  <script>
+    var keyInput;
+    var urlInput;
+    var keyExists = false;
+    document.addEventListener("DOMContentLoaded", function() {
+      keyInput = document.getElementById("key-input");
+      keyInput.addEventListener("input", function() {
+        var xhr = new XMLHttpRequest();
+        xhr.open("POST", "/exists", true);
+        xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+        xhr.onload = function() {
+          var body = JSON.parse(this.responseText);
+          keyExists = body.exists;
+          body.exists ? keyInput.classList.add("exists") : keyInput.classList.remove("exists");
+        }
+        xhr.send(encode({key: keyInput.value}));
+      })
+      urlInput = document.getElementById("url-input");
+      var form = document.getElementById("addForm");
+      form.addEventListener("submit", function(e) {
+        e.preventDefault();
+        if(keyExists) return showExistsWarning();
+        validateUrl();
+        var obj = {};
+        obj.url = urlInput.value;
+        obj.key = keyInput.value;
+        var xhr = new XMLHttpRequest();
+        xhr.open("POST", "/add", true);
+        xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+        xhr.onload = function() {
+          var body = JSON.parse(this.responseText);
+          hideInfo();
+          body.success ? postSuccess(obj) : postFail(obj);
+        }
+        xhr.send(encode(obj));
+      });
+    });
+
+    function encode(obj) {
+      var str = "";
+      var first = true;
+      for(key in obj) {
+        if(!first) str += "&";
+        first = false;
+        str += key + "=" + encodeURIComponent(obj[key]);
+      }
+      return str;
+    }
+
+    function validateUrl() {
+      var regex = /http[s]?:\/\//;
+      var url = urlInput.value;
+      var match = regex.exec(url);
+      if(match && match.index != 0 || !match) {
+        urlInput.value = "http://" + url;
+      }
+    }
+
+    function showExistsWarning() {
+      document.getElementById("exists-submit-error").style.display = "block";
+      setTimeout(function() {
+        document.getElementById("exists-submit-error").style.display = "";
+      }, 5000);
+    }
+
+    function postSuccess(obj) {
+      var el = document.getElementById("post-success");
+      el.innerText = obj.key + " added successfully";
+      el.style.display = "block";
+      setTimeout(function() {
+        el.style.display = "";
+      }, 5000);
+    }
+
+    function postFail(obj) {
+      var el = document.getElementById("post-error");
+      el.innerText = "Failed to add " + obj.key;
+      el.style.display = "block";
+      setTimeout(function() {
+        el.style.display = "";
+      }, 5000);
+    }
+
+    function hideInfo() {
+      var els = document.getElementsByClassName("info");
+      for(var i = 0 ; i < els.length; i++) {
+        els[i].style.display = "";
+      }
+    }
+  </script>
+  <style>
+    form {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate3d(-50%, -50%, 0);
+      text-align: center;
+      border: 4px solid black;
+      padding: 20px;
+    }
+
+    input {
+      display: block;
+      margin: 4px auto 4px auto;
+      padding: 4px;
+    }
+    .exists {
+      outline: red outset thin;
+    }
+    h3 {
+      margin-bottom: 0;
+    }
+    .info {
+      display: none;
+    }
+    .error {
+      color: red;
+    }
+    .success {
+      color: green;
+    }
+  </style>
+</head>
+<body>
+  <form id="addForm">
+    <h2>Add url to Q</h2>
+    <div id="post-success" class="info success"></div>
+    <div id="post-error" class="info error"></div>
+    <h3>Key</h3>
+    <div id="exists-submit-error" class="info error">This key already exists</div>
+    <input id="key-input" autocomplete="off"></input>
+    <h3>URL</h3>
+    <input id="url-input" autocomplete="off"></input>
+    <input type="submit"></input>
+</body>
+</html>
